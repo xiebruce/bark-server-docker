@@ -1,0 +1,49 @@
+version: '1.0'
+name: bark-server
+services:
+  # nginx服务器，用于反代到bark-server
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx-dockerfile
+    image: bruce/nginx
+    container_name: nginx
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./conf/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./conf/nginx/vhost/:/etc/nginx/conf.d/
+      - ./logs/nginx/:/data/wwwlogs/
+      - ./wwwroot/:/data/wwwroot/
+      - ./certs/:/root/certs/
+    network_mode: host
+    restart: always
+  # acme.sh，用于申请https证书
+  # 文档：https://github.com/acmesh-official/acme.sh/wiki/Run-acme.sh-in-docker
+  acme.sh:
+    build:
+      context: .
+      dockerfile: acme.sh-dockerfile
+    # 这个image就是上面构建的img，这样可以自定义名称
+    image: bruce/acme.sh
+    container_name: acme.sh
+    environment:
+      - CF_Email=${CF_Email}
+      - CF_Key=${CF_Key}
+      # acme.sh工作目录，获取证书或日志文件都会向该目录写入，该参数也可在运行时通过--home来覆盖
+      - LE_WORKING_DIR=/root/acmeout
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./certs/:/root/certs/
+      - ./wwwroot/:/data/wwwroot/
+      - ./acmeout/:/root/acmeout/
+    network_mode: host
+    restart: always
+  # Bark app服务器端
+  bark-server:
+    image: finab/bark-server
+    container_name: bark-server
+    volumes:
+      - ./data:/data
+    network_mode: host
+    restart: always

@@ -1,0 +1,24 @@
+FROM alpine
+
+RUN set -ex \
+&& apk update \
+&& apk add --no-cache tzdata ca-certificates git openssl wget \
+&& git clone https://github.com/acmesh-official/acme.sh.git /root/.acme.sh/ \
+&& apk del git \
+&& rm -rf /var/cache/apk/* \
+&& mkdir /root/acmeout \
+&& ln -s /root/.acme.sh/acme.sh /usr/bin/acme.sh \
+# && acme.sh --set-default-ca --server letsencrypt --home /root/acmeout \
+# “crontab -”表示接收stdin中的内容输入到crontab中，这样就避免了使用“crontab -e”，因为“crontab -e”需要手动操作
+# 但这样会覆盖之前的，因为我这是容器，crontab默认没有东西，所以不怕覆盖，但如果你怕覆盖，你可以用“crontab -l”先读取
+# crontab里的内容并输出到一个文件中，然后把我们自己要添加的用“>>”符号添加到该文件中，最后“cat xxx.txt | crontab -l”
+# 就可以把xxx.txt中的所有内容放到crontab中，添加完之后再把xxx.txt删掉就行
+&& echo "7 3 * * * /root/.acme.sh/acme.sh --cron --home /root/acmeout" | crontab -
+# 测试
+# && echo "*/1 * * * * echo '1234' >> /root/certs/test.txt" | crontab -
+
+# 运行crond(计划任务进程)，-f表示foregroud，因为docker中运行的程序都必须
+# 前台运行(然后整个容器会后台)，-l 2表示log level为2，0输出最多，8输出最少
+# CMD /usr/sbin/crond -l 2 -f
+# 每个空格都要用一个逗号隔开，acme.sh本身不是服务，但需要计划任务服务来定时更新
+CMD ["/usr/sbin/crond", "-f", "-l", "2"]

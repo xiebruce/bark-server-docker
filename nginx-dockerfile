@@ -1,0 +1,9 @@
+FROM nginx:alpine
+
+RUN set -ex \
+mkdir -p /data/
+# -g表示在配置文件外部设置全局指令，g就是global的意思，其实这个daemon off
+# 也可以写在配置文件内，在这里就不用指定了，不过为了突显它是前台启动，并且为了
+# 配置文件能通用，所以就不把daemon off写在配置文件内部而是写在这里了
+# 注意daemon本质上是应该写在配置文件中的，所以它有“;”号结尾，不写会报错
+CMD ["/usr/sbin/nginx", "-g", "daemon off;"]

@@ -1,0 +1,36 @@
+# 80端口，用于acme.sh获取tls证书以及跳转到443
+server {
+    listen 80;
+    listen [::]:80;
+    server_name bark.example.com bark-cdn.example.com;
+
+    # access_log /data/wwwlogs/bark.example.com_80.access.log combined;
+    access_log /data/wwwlogs/bark.example.com_nginx.access.log combined buffer=1k;
+    error_log /data/wwwlogs/bark.example.com_80.error.log error;
+
+    charset utf-8;
+
+    root /data/wwwroot/well-known;
+    index index.html;
+
+    # 验证时，letsencript会向你的服务器发起一个如下所示的http请求
+    # 172.71.142.131 - - [25/Aug/2022:20:42:51 +0000] "GET /.well-known/acme-challenge/z0cTIz2zcORh47L0EwrSXKKoJxKMUTFK0EJIMrRWYaA HTTP/1.1" 200 87 "-" "Mozilla/5.0 (compatible; Let's Encrypt validation server;+https://www.letsencrypt.org)"
+    # 可以看到它请求的是：/.well-known/acme-challenge/z0cTIz2zcORh47L0EwrSXKKoJxKMUTFK0EJIMrRWYaA
+    # 基于这个规则，acme.sh(或certbot)的--webroot模式，acme.sh会自动在你指定的root目录下创建这个文件：
+    # /.well-known/acme-challenge/z0cTIz2zcORh47L0EwrSXKKoJxKMUTFK0EJIMrRWYaA
+    # 所以我们要配置一个location规则，让该请求能正常访问到acme.sh创建的文件
+    # 参考：https://eff-certbot.readthedocs.io/en/stable/using.html#webroot
+    location ^~ /.well-known/acme-challenge/ {
+        default_type text/plain;
+    }
+
+    location = /index.html {
+        try_files $uri $uri/ =404;
+    }
+
+    # 其它请求都跳转到https
+    location / {
+        # 不用301，有时候出问题很难测，因为301容易被记住
+        return 302 https://$host$request_uri;
+    }
+}
