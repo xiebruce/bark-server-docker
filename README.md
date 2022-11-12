@@ -76,16 +76,16 @@ EOF
 
 其它的请自己从[这里](https://github.com/acmesh-official/acme.sh/tree/master/dnsapi)找到 对应文件，然后点进去看源码里用的哪个变量。
 
-如果添加错了，请自己用vi/vim/nano命令去~/.bashrc文件或~/.zshrc文件中修改
+如果添加错了，请自己用vi/vim/nano命令去`~/.bashrc`文件或`~/.zshrc`文件中修改
 
 ---
 
-让环境变量生效(如果你用的是zsh，要把下边的.bashrc换成.zshrc)
+让环境变量生效(如果你用的是zsh，要把下边的`.bashrc`换成`.zshrc`)
 ```bash
 source ~/.bashrc
 ```
 
-确认环境变量确实已生效，如果生效，运行以下两个会输出你前面填到
+确认环境变量确实已生效，如果生效，运行以下两个命令，会分别输出你前面添加到环境变量中的值
 ```bash
 echo $CF_Email
 echo $CF_Key
@@ -255,7 +255,7 @@ curl https://bark.zhangsan.com/ping
 在Bark app中，点击底部第一个按钮“服务器” → 点击“右上角+号” → 把地址`https://bark.zhangsan.com`粘贴进去 → 点击右上角的对勾✓ → 它会返回到服务器列表中，至此就添加完成了。
 
 ### 如果之前已有nginx
-如果你之前就已经有nginx，也配置好了证书，那么你可以把acme.sh模块注释掉
+如果你之前就已经有nginx，也配置好了证书，那么你可以把`docker-compose.yml`中的acme.sh模块(即以下模块)注释掉
 ```bash
 # acme.sh，用于申请https证书
 # 文档：https://github.com/acmesh-official/acme.sh/wiki/Run-acme.sh-in-docker
@@ -285,7 +285,7 @@ restart: always
 server_name example.com www.example.com bark.zhangsan.com bark-cdn.zhangsan.com;
 ```
 
-然后参考以下的写法，通过if来判断域名，相当于一个location两个用途，当符合if条件的时候，就用于bark-server，当不符合if条件的时候，就用于它之前的用途
+然后参考以下的写法，通过if来判断域名，相当于一个location两个用途，当符合if条件的时候，就用于bark-server，当不符合if条件的时候，就用于它之前的用途，当然location后不能有其它，只能有一个斜杠`/`
 ```nginx
 location / {
     set $flag 0;
