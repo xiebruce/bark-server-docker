@@ -146,6 +146,7 @@ exit
 
 运行所有服务(需要确保80,8080这两个端口未被占用)
 ```bash
+cd bark-server-docker
 docker compose up -d
 ```
 
@@ -157,7 +158,25 @@ a912a1d54baa   finab/bark-server   "/entrypoint.sh bark…"   37 seconds ago   U
 2038321f125f   bruce/acme.sh       "/usr/sbin/crond -f …"   45 minutes ago   Up 45 minutes             acme.sh
 ```
 
-进入acme.sh容器中
+先做一个访问测试，在wwwroot目录下创建目录和文件
+```bash
+mkdir -p wwwroot/well-known/.well-known/acme-challenge/
+echo 'This is a test!' >> wwwroot/well-known/.well-known/acme-challenge/test.txt
+```
+然后在你电脑浏览器中访问：[http://bark.zhangsan.com/.well-known/acme-challenge/test.txt](http://bark.zhangsan.com/.well-known/acme-challenge/test.txt)
+
+如果浏览器能正常输出“This is a test!”，说明访问是通的，现在你可以把刚刚添加的文件夹删掉了
+```bash
+rm -rf wwwroot/well-known/.well-known
+```
+
+**注**：做这个测试的原因，是因为acme.sh使用http-01方式申请letsencrypt证书时，letsencrypt服务器是会向上边那个测试链接发起一个GET请求的，只不过它不是请求test.txt，而是访问一个它自己创建的文件(文件名比较长)，所以我们必须保证这个链接能正常访问，否则申请证书肯定失败。
+
+而我之所以在确认链接没问题后，又把`.well-known`文件夹删掉，是因为acme.sh在验证时会自动创建`.well-known/acme-challenge/`这个文件夹，以及自动在该文件夹下创建一个用户校验的文件(文件名格式类似这样“z0cTIz2zcORh47L0EwrSXKKoJxKMUTFK0EJIMrRWYaA”)，验证完它又会自动删掉，就好像一切都没发生过。
+
+---
+
+测试完上边的检验链接没问题后，我们进入acme.sh容器中
 ```bash
 docker exec -it acme.sh sh
 ```
