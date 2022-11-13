@@ -38,16 +38,16 @@ bark.example.com-80.conf.bak
 bark.example.com.conf.bak
 ```
 
-复制一份bark.example.com-80.conf.bak，并修改文件名如下(其中zhangsan.com要改成你自己真实的域名)
+把两个example配置文件分别复制一份，并修改文件名如下(其中zhangsan.com要改成你自己真实的域名)
 ```bash
 bark.example.com-80.conf.bak
 bark.example.com.conf.bak
 bark.zhangsan.com-80.conf
 bark.zhangsan.com.conf.bak
 ```
-注意：`bark.zhangsan.com-80.conf`是没有`.bak`结尾的，而`bark.zhangsan.com.conf.bak`是有`.bak`结尾的，原因是，`bark.zhangsan.com.conf.bak`中监听的是443端口，需要tls证书，而现在还没有申请证书呢，所以不能启用它，否则会报错(`.conf`结尾就会被启用，我加了个`.bak`就是防止它被启用)。
+注意：`.conf`结尾表示启用该配置文件，这里先启用`bark.zhangsan.com-80.conf`(监听的80端口)，而`bark.zhangsan.com.conf.bak`暂时不启用，因为它监听的是443端口，需要tls证书，而现在还没有申请证书呢，所以不能启用它，否则会报错找不到证书。
 
-分别把`bark.zhangsan.com-80.conf`和`bark.zhangsan.com.conf`里面的`example.com`修改成`zhangsan.com`(注意要换成你自己的域名)，其实主要就是`server_name`,`access_log`和`error_log`这三个的值，如下所示：
+分别把`bark.zhangsan.com-80.conf`和`bark.zhangsan.com.conf.bak`里面的`example.com`修改成`zhangsan.com`(注意要换成你自己的域名)，其实主要就是`server_name`,`access_log`和`error_log`这三个的值，如下所示：
 ```bash
 server_name bark.zhangsan.com bark-cdn.zhangsan.com;
 
