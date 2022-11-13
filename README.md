@@ -27,8 +27,6 @@ git clone https://github.com/xiebruce/bark-server-docker.git
 **建议**：如果你的域名不是.cf .ml .tk .ga .gq这些免费域名，建议使用第一种方式。
 
 ### 修改nginx配置文件
-dns-01方式不用先修改nginx配置文件，而http-01方式需要修改nginx配置文件(80端口那个)，为了统一，这里先统一修改一下80端口的nginx配置文件。
-
 进入以下目录
 ```bash
 cd bark-server-docker/conf/nginx/vhost
@@ -45,10 +43,11 @@ bark.example.com.conf.bak
 bark.example.com-80.conf.bak
 bark.example.com.conf.bak
 bark.zhangsan.com-80.conf
+bark.zhangsan.com.conf.bak
 ```
-注意：暂时不要复制`bark.example.com.conf.bak`，因为还没有申请证书，你启用了它就会报错。
+注意：`bark.zhangsan.com-80.conf`是没有`.bak`结尾的，而`bark.zhangsan.com.conf.bak`是有`.bak`结尾的，原因是，`bark.zhangsan.com.conf.bak`中监听的是443端口，需要tls证书，而现在还没有申请证书呢，所以不能启用它，否则会报错(`.conf`结尾就会被启用，我加了个`.bak`就是防止它被启用)。
 
-打开`bark.zhangsan.com-80.conf`，把里面的`example.com`修改成`zhangsan.com`(注意要换成你自己的域名)，其实主要就是`server_name`,`access_log`和`error_log`这三个的值，如下所示：
+分别把`bark.zhangsan.com-80.conf`和`bark.zhangsan.com.conf`里面的`example.com`修改成`zhangsan.com`(注意要换成你自己的域名)，其实主要就是`server_name`,`access_log`和`error_log`这三个的值，如下所示：
 ```bash
 server_name bark.zhangsan.com bark-cdn.zhangsan.com;
 
@@ -195,28 +194,17 @@ acme.sh容器内部运行了一个crond服务，你在acme.sh容器内执行`cro
 cd bark-server-docker/conf/nginx/vhost
 ```
 
-可以看到目录中有这三个文件
+可以看到目录中有这四个文件
 ```bash
 bark.example.com-80.conf.bak
 bark.example.com.conf.bak
 bark.zhangsan.com-80.conf
+bark.zhangsan.com.conf.bak
 ```
 
-`bark.example.com-80.conf.bak`前面我们已经复制过一份了，现在只要把`bark.example.com.conf.bak`也复制一份，并改成类似如下的名称(其中zhangsan.com要改成你自己真实的域名)
+把`bark.zhangsan.com.conf.bak`后面的`.bak`去掉，表示启用该配置文件(`.conf`结尾就会被启用)，该配置文件为监听443端口的配置文件，因为前面已经申请了证书，所以这里可以启用它
 ```bash
-bark.example.com-80.conf.bak
-bark.example.com.conf.bak
-bark.zhangsan.com-80.conf
-bark.zhangsan.com.conf
-```
-
-与`bark.zhangsan.com-80.conf`一样，把`bark.zhangsan.com.conf`中的`example.com`改成`zhangsan.com`(当然你要用你真实的域名)，其实主要就是`server_name`,`access_log`和`error_log`这三个
-```bash
-server_name bark.zhangsan.com bark-cdn.zhangsan.com;
-
-# access_log /data/wwwlogs/bark.zhangsan.com_nginx.access.log combined;
-access_log /data/wwwlogs/bark.zhangsan.com_nginx.access.log combined buffer=1k;
-error_log /data/wwwlogs/bark.zhangsan.com_nginx.error.log error;
+mv bark.zhangsan.com.conf.bak bark.zhangsan.com.conf
 ```
 
 检查80,443,8080三个端口未被占用，因为80和443 nginx要使用，8080是bark-server的端口(无法改，代码中写死的，main.go文件中能搜到)
