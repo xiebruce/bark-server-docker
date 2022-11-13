@@ -127,7 +127,7 @@ acme.sh --issue --dns dns_cf -d zhangsan.com -d '*.zhangsan.com' --keylength ec-
 ```bash
 acme.sh --install-cert --ecc --home /root/acmeout -d 'zhangsan.com' \
 --key-file       /root/certs/private.pem  \
---fullchain-file /root/certs/fullchain.pem
+--fullchain-file /root/certs/fullchain.pem \
 --reloadcmd      "docker restart nginx"
 ```
 
@@ -172,7 +172,7 @@ acme.sh --issue -d bark.zhangsan.com -d bark-cdn.zhangsan.com --webroot /data/ww
 ```bash
 acme.sh --install-cert --ecc --home /root/acmeout -d 'bark.zhangsan.com' \
 --key-file       /root/certs/private.pem  \
---fullchain-file /root/certs/fullchain.pem
+--fullchain-file /root/certs/fullchain.pem \
 --reloadcmd      "docker restart nginx"
 ```
 
