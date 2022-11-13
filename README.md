@@ -205,6 +205,7 @@ acme.sh容器内部运行了一个crond服务，你在acme.sh容器内执行`cro
 ```bash
 7 3 * * * /root/.acme.sh/acme.sh --cron --home /root/acmeout
 ```
+注：虽然每天都会检查一次更新，但如果检查发现没有到期，它是不会更新证书的，如果到期了，它才会更新，而且更新完它会自动重启nginx服务器以新加载新证书(因为第一次安装证书时用`--reloadcmd`指定了安装证书后重启nginx，它是会记住这个命令的)。至于为什么在容器内它也能重启另一个容器，那是因为我在容器内安装了docker-cli(acme.sh-dockerfile自动安装的)，并且把`/var/run/docker.sock`映射进去了。
 
 ## 运行所有服务
 ### 再修改nginx配置文件
