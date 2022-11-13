@@ -261,6 +261,8 @@ curl https://bark.zhangsan.com/ping
 {"code":200,"message":"pong","timestamp":1668248534}
 ```
 
+至此，服务器就算是搭建完成了，你的消息推送地址为：`https://bark.zhangsan.com`，把它填到Bark app中就行。
+
 ### 添加地址到Bark app
 在Bark app中，点击底部第一个按钮“服务器” → 点击“右上角+号” → 把地址`https://bark.zhangsan.com`粘贴进去 → 点击右上角的对勾✓ → 它会返回到服务器列表中，至此就添加完成了。
 
