@@ -37,6 +37,7 @@ services:
       - ./certs/:/root/certs/
       - ./wwwroot/:/data/wwwroot/
       - ./acmeout/:/root/acmeout/
+      - /var/run/docker.sock:/var/run/docker.sock
     network_mode: host
     restart: always
   # Bark app服务器端

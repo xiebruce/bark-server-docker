@@ -1,4 +1,4 @@
-# 使用说明
+# bark-server-docker使用说明
 
 **原理**：通过nginx承接https(443端口)流量，并转发给bark-server的8080端口，以达到加密的目的。而acme.sh用于申请证书，当你用http-01方式来申请证书时，需要nginx开一个80端口来让letsencrypt校验，但由于还没有申请到证书，所以443端口那个配置文件暂时不能启用，等申请到证书，安装到目的文件夹后，再启用443端口那个nginx配置文件(复制一份并去掉`.bak`后缀就会启用)。
 
@@ -128,6 +128,7 @@ acme.sh --issue --dns dns_cf -d zhangsan.com -d '*.zhangsan.com' --keylength ec-
 acme.sh --install-cert --ecc --home /root/acmeout -d 'zhangsan.com' \
 --key-file       /root/certs/private.pem  \
 --fullchain-file /root/certs/fullchain.pem
+--reloadcmd      "docker restart nginx"
 ```
 
 安装成功是这样的
@@ -172,6 +173,7 @@ acme.sh --issue -d bark.zhangsan.com -d bark-cdn.zhangsan.com --webroot /data/ww
 acme.sh --install-cert --ecc --home /root/acmeout -d 'bark.zhangsan.com' \
 --key-file       /root/certs/private.pem  \
 --fullchain-file /root/certs/fullchain.pem
+--reloadcmd      "docker restart nginx"
 ```
 
 安装成功是这样的

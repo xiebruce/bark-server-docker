@@ -1,8 +1,11 @@
 FROM alpine
 
 RUN set -ex \
+&& os_version=$(awk -F. '{print "v"$1"."$2}' /etc/alpine-release) \
+&& echo http://ftp.halifax.rwth-aachen.de/alpine/${os_version}/main >> /etc/apk/repositories \
+&& echo http://ftp.halifax.rwth-aachen.de/alpine/${os_version}/community >> /etc/apk/repositories \
 && apk update \
-&& apk add --no-cache tzdata ca-certificates git openssl wget \
+&& apk add --no-cache tzdata ca-certificates git openssl wget docker-cli \
 && git clone https://github.com/acmesh-official/acme.sh.git /root/.acme.sh/ \
 && apk del git \
 && rm -rf /var/cache/apk/* \
@@ -22,3 +25,5 @@ RUN set -ex \
 # CMD /usr/sbin/crond -l 2 -f
 # 每个空格都要用一个逗号隔开，acme.sh本身不是服务，但需要计划任务服务来定时更新
 CMD ["/usr/sbin/crond", "-f", "-l", "2"]
+
+# How to install docker & docker-compose on Alpine Linux：https://techoverflow.net/2021/05/07/how-to-install-docker-docker-compose-on-alpine-linux/
