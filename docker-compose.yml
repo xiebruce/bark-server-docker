@@ -45,6 +45,19 @@ services:
     image: finab/bark-server
     container_name: bark-server
     volumes:
-      - ./data:/data
+      - ./data/bark:/data
+    network_mode: host
+    restart: always
+  # Chanify app服务器端: https://github.com/chanify/chanify
+  # 也是一个苹果消息推送服务器，但功能强大的多，但也比较复杂，用的人少
+  chanify:
+    image: wizjin/chanify:dev
+    container_name: chanify
+    command: serve
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./data/chanify:/data
+      - ./conf/chanify/chanify.yml:/root/.chanify.yml
     network_mode: host
     restart: always

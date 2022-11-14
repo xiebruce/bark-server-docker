@@ -2,7 +2,7 @@
 server {
     listen 80;
     listen [::]:80;
-    server_name bark.example.com bark-cdn.example.com;
+    server_name example.com www.example.com bark.example.com chanify.example.com;
 
     # access_log /data/wwwlogs/bark.example.com_80.access.log combined;
     access_log /data/wwwlogs/bark.example.com_nginx.access.log combined buffer=1k;
