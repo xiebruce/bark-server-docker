@@ -1,12 +1,21 @@
 # bark-server-docker使用说明
 
-**原理**：通过nginx承接https(443端口)流量，并转发给bark-server的8080端口，以达到加密的目的。而acme.sh用于申请证书，当你用http-01方式来申请证书时，需要nginx开一个80端口来让letsencrypt校验，但由于还没有申请到证书，所以443端口那个配置文件暂时不能启用，等申请到证书，安装到目的文件夹后，再启用443端口那个nginx配置文件(复制一份并去掉`.bak`后缀就会启用)。
+本项目集成了四个容器：
+
+- 1、bark-server：自建bark app服务器端；
+- 2、chanify：自建chanify app服务器端(chanify app是与bark app类似的iPhone消息推送工具)；
+- 3、nginx：由于bark-server和chanify都只支持http，不支持https，所以需要nginx来支持https，并把请求反代到bark-server和chanify；
+- 4、acme.sh：nginx支持https需要申请证书，acme.sh就是用于申请证书以及自动续期证书的工具；
+
+---
+
+**原理**：通过nginx承接https(443端口)流量，并转发给bark-server的8080以及chanify的8081端口，以达到加密的目的。而acme.sh用于申请证书，当你用http-01方式来申请证书时，需要nginx开一个80端口来让letsencrypt校验，但由于还没有申请到证书，所以443端口那个配置文件暂时不能启用，等申请到证书，安装到目的文件夹后，再启用443端口那个nginx配置文件(复制一份并去掉`.bak`后缀就会启用)。
 
 ## 环境准备
 ### 工具材料
 - 1、准备一台Linux服务器（最好是国外服务器，这样不用备案更省事，这里以Debian 11系统为例），假设ip为：12.34.56.78；
 - 2、准备一个域名，假设为：zhangsan.com；
-- 3、解析一个三级域名到到你的服务器，假设为：bark.zhangsan.com，添加一条A记录，解析到你的服务器：12.34.56.78，并且`ping bark.zhangsan.com`能ping通（当然你也可以解析多个域名到同一个服务器，比如如果是使用cloudflare解析，我一般会再解析一个`bark-cdn.zhangsan.com`到我的服务器中，这个要开启小云朵表示走cdn）；
+- 3、解析两个三级域名到你的服务器ip(12.34.56.78)，假设分别为：bark.zhangsan.com、chanify.zhangsan.com，这两个域名分别用于bark-server和chanify，如果你只用其中一个，那就解析一个就行；
 
 ### 安装docker
 在服务器中安装docker，请参考官方文档：[Install Docker Engine on Debian](https://docs.docker.com/engine/install/debian/)。
@@ -18,13 +27,32 @@ cd /root/
 git clone https://github.com/xiebruce/bark-server-docker.git
 ```
 
+clone下来的bark-server-docker文件夹中有一个docker-compose.yml文件，该文件是docker compose配置文件，它有四个模块，其中acme.sh和nginx肯定要用到的，而bark-server和chanify这两个一般人只要用其中一个就够了，你自己看情况，把不用的那个注释掉，当然如果你两个都用也行，它们是可以同时启动的。
+
+比如你不想用chanify，那就把两个chanify模块注释掉
+```yaml
+  # Chanify app服务器端: https://github.com/chanify/chanify
+  # 也是一个苹果消息推送服务器，但功能强大的多，但也比较复杂，用的人少
+  # chanify:
+  #   image: wizjin/chanify:dev
+  #   container_name: chanify
+  #   command: serve
+  #   environment:
+  #     - TZ=Asia/Shanghai
+  #   volumes:
+  #     - ./data/chanify:/data
+  #     - ./conf/chanify/chanify.yml:/root/.chanify.yml
+  #   network_mode: host
+  #   restart: always
+```
+
 ## 申请https证书
 申请https证书有以下两种方式(两种方式选一种就行，不要两种都用)：
 
 - 1、dns-01方式：不能是.cf .ml .tk .ga .gq这些免费域名，并且需要添加环境变量(前面有说过)；
 - 2、http-01方式：任何域名都可以，不用添加环境变量，但不能申请通配符证书(不推荐，除非你是免费域名)；
 
-**建议**：如果你的域名不是.cf .ml .tk .ga .gq这些免费域名，建议使用第一种方式。
+**建议**：如果你的域名不是.cf .ml .tk .ga .gq这些免费域名，建议使用第一种方式(即dns-01方式)。
 
 ### 修改nginx配置文件
 进入以下目录
@@ -47,17 +75,17 @@ bark.zhangsan.com.conf.bak
 ```
 注意：`.conf`结尾表示启用该配置文件，这里先启用`bark.zhangsan.com-80.conf`(监听的80端口)，而`bark.zhangsan.com.conf.bak`暂时不启用，因为它监听的是443端口，需要tls证书，而现在还没有申请证书呢，所以不能启用它，否则会报错找不到证书。
 
-分别把`bark.zhangsan.com-80.conf`和`bark.zhangsan.com.conf.bak`里面的`example.com`修改成`zhangsan.com`(注意要换成你自己的域名)，其实主要就是`server_name`,`access_log`和`error_log`这三个的值，如下所示：
+然后分别把`bark.zhangsan.com-80.conf`和`bark.zhangsan.com.conf.bak`里面的`example.com`修改成`zhangsan.com`(注意要换成你自己的域名)，其实主要就是`server_name`,`access_log`和`error_log`这三个的值，如下所示：
 ```bash
-server_name bark.zhangsan.com bark-cdn.zhangsan.com;
+server_name bark.zhangsan.com chanify.zhangsan.com;
 
-# access_log /data/wwwlogs/bark.zhangsan.com_nginx.access.log combined;
-access_log /data/wwwlogs/bark.zhangsan.com_nginx.access.log combined buffer=1k;
-error_log /data/wwwlogs/bark.zhangsan.com_nginx.error.log error;
+# access_log /data/wwwlogs/zhangsan.com_nginx.access.log combined;
+access_log /data/wwwlogs/zhangsan.com_nginx.access.log combined buffer=1k;
+error_log /data/wwwlogs/zhangsan.com_nginx.error.log error;
 ```
 
 ### dns-01方式申请证书
-执行以下命令添加环境变量(如果你用的是zsh，需要把.bashrc修改为.zshrc)，这里假设你是在cloudflare解析的域名
+执行以下命令添加环境变量(如果你用的是zsh，需要把`.bashrc`修改为`.zshrc`)，这里假设你是在cloudflare解析的域名
 ```bash
 cat > ~/.bashrc << EOF
 export CF_Email=zhangsan@163.com
@@ -73,7 +101,7 @@ export Ali_Secret=sdf39sdDfsjDkJN#)EJD
 EOF
 ```
 
-其它的请自己从[这里](https://github.com/acmesh-official/acme.sh/tree/master/dnsapi)找到 对应文件，然后点进去看源码里用的哪个变量。
+其它的请自己从[这里](https://github.com/acmesh-official/acme.sh/tree/master/dnsapi)找到对应文件，然后点进去看源码里用的哪个变量。
 
 如果添加错了，请自己用vi/vim/nano命令去`~/.bashrc`文件或`~/.zshrc`文件中修改
 
@@ -102,13 +130,16 @@ docker compose up -d
 docker ps
 ```
 
-如果容器成功启动，显示应该类似如下
+如果容器成功启动，显示应该类似如下(四个容器，本文开头有说)
 ```bash
-CONTAINER ID   IMAGE               COMMAND                  CREATED          STATUS          PORTS     NAMES
-aa969e57ba73   bruce/nginx         "/docker-entrypoint.…"   37 seconds ago   Up 1 second               nginx
-a912a1d54baa   finab/bark-server   "/entrypoint.sh bark…"   37 seconds ago   Up 37 seconds             bark-server
-2038321f125f   bruce/acme.sh       "/usr/sbin/crond -f …"   45 minutes ago   Up 45 minutes             acme.sh
+CONTAINER ID   IMAGE                COMMAND                  CREATED         STATUS         PORTS     NAMES
+1a96e50b4d49   wizjin/chanify:dev   "/usr/local/bin/chan…"   3 seconds ago   Up 2 seconds             chanify
+bff0659b6f25   bruce/nginx          "/docker-entrypoint.…"   3 seconds ago   Up 2 seconds             nginx
+a566d5ca2c0f   bruce/acme.sh        "/usr/sbin/crond -f …"   3 seconds ago   Up 2 seconds             acme.sh
+c56fc7cf6a25   finab/bark-server    "/entrypoint.sh bark…"   3 seconds ago   Up 2 seconds             bark-server
 ```
+
+---
 
 进入acme.sh容器中
 ```bash
@@ -152,10 +183,11 @@ docker compose up -d
 
 运行后，使用`docker ps`查看，应该是如下所示这样的
 ```bash
-CONTAINER ID   IMAGE               COMMAND                  CREATED          STATUS          PORTS     NAMES
-aa969e57ba73   bruce/nginx         "/docker-entrypoint.…"   37 seconds ago   Up 1 second               nginx
-a912a1d54baa   finab/bark-server   "/entrypoint.sh bark…"   37 seconds ago   Up 37 seconds             bark-server
-2038321f125f   bruce/acme.sh       "/usr/sbin/crond -f …"   45 minutes ago   Up 45 minutes             acme.sh
+CONTAINER ID   IMAGE                COMMAND                  CREATED         STATUS         PORTS     NAMES
+1a96e50b4d49   wizjin/chanify:dev   "/usr/local/bin/chan…"   3 seconds ago   Up 2 seconds             chanify
+bff0659b6f25   bruce/nginx          "/docker-entrypoint.…"   3 seconds ago   Up 2 seconds             nginx
+a566d5ca2c0f   bruce/acme.sh        "/usr/sbin/crond -f …"   3 seconds ago   Up 2 seconds             acme.sh
+c56fc7cf6a25   finab/bark-server    "/entrypoint.sh bark…"   3 seconds ago   Up 2 seconds             bark-server
 ```
 
 先做一个访问测试，在wwwroot目录下创建目录和文件
@@ -172,7 +204,7 @@ rm -rf wwwroot/well-known/.well-known
 
 **注**：做这个测试的原因，是因为acme.sh使用http-01方式申请letsencrypt证书时，letsencrypt服务器是会向上边那个测试链接发起一个GET请求的，只不过它不是请求test.txt，而是访问一个它自己创建的文件(文件名比较长)，所以我们必须保证这个链接能正常访问，否则申请证书肯定失败。
 
-而我之所以在确认链接没问题后，又把`.well-known`文件夹删掉，是因为acme.sh在验证时会自动创建`.well-known/acme-challenge/`这个文件夹，以及自动在该文件夹下创建一个用户校验的文件(文件名格式类似这样“z0cTIz2zcORh47L0EwrSXKKoJxKMUTFK0EJIMrRWYaA”)，验证完它又会自动删掉，就好像一切都没发生过。
+而我之所以在确认链接没问题后，又把`.well-known`文件夹删掉，是因为acme.sh在验证时会自动创建`.well-known/acme-challenge/`这个文件夹，以及自动在该文件夹下创建一个用户校验的文件(文件名格式类似这样“z0cTIz2zcORh47L0EwrSXKKoJxKMUTFK0EJIMrRWYaA”)，验证完它又会自动删掉，就好像一切都没发生过，所以不需要我们自己创建。
 
 ---
 
@@ -181,14 +213,15 @@ rm -rf wwwroot/well-known/.well-known
 docker exec -it acme.sh sh
 ```
 
-运行以下命令申请证书(注意每个`-d`表示一个域名，如果你只有`bark.zhangsan.com`一个域名，那后面那个`-d bark-cdn.zhangsan.com`就可以删掉)，当然`zhangsan.com`要换成你自己的真实域名
+运行以下命令申请证书，当然`zhangsan.com`要换成你自己的真实域名
 ```bash
-acme.sh --issue -d bark.zhangsan.com -d bark-cdn.zhangsan.com --webroot /data/wwwroot/well-known/  --home /root/acmeout --keylength ec-256
+acme.sh --issue -d zhangsan.com -d www.zhangsan.com -d bark.zhangsan.com -d chanify.zhangsan.com --webroot /data/wwwroot/well-known/  --home /root/acmeout --keylength ec-256
 ```
+**注意**：每个`-d`表示一个域名，如果你又解析了一个域名，你还得把它加到下边命令中，重新申请一次证书，不能申请通配符证书就是这么麻烦。
 
 申请证书成功后，安装证书
 ```bash
-acme.sh --install-cert --ecc --home /root/acmeout -d 'bark.zhangsan.com' \
+acme.sh --install-cert --ecc --home /root/acmeout -d 'zhangsan.com' \
 --key-file       /root/certs/private.pem  \
 --fullchain-file /root/certs/fullchain.pem \
 --reloadcmd      "docker restart nginx"
@@ -227,13 +260,16 @@ bark.zhangsan.com.conf.bak
 mv bark.zhangsan.com.conf.bak bark.zhangsan.com.conf
 ```
 
-检查80,443,8080三个端口未被占用，因为80和443 nginx要使用，8080是bark-server的端口(无法改，代码中写死的，main.go文件中能搜到)
+检查80,443,8080,8081四个端口未被占用，因为80和443 nginx要使用，8080是bark-server的端口(无法改，代码中写死的，main.go文件中能搜到)，8081是chanify要占用
 ```bash
+# grep 80，所有80开头的端口都会被列出
 netstat -tlunp | grep 80
+
+# grep 443，查找443端口是否被占用
 netstat -tlunp | grep 443
 ```
 
-如果上边说的三个端口都没被占用，那么就可以启动所有服务了
+如果上边说的四个端口都没被占用，那么就可以启动所有服务了
 ```bash
 # 进入docker-compose.yml所在文件夹
 cd bark-server-docker
@@ -242,79 +278,49 @@ cd bark-server-docker
 docker compose up -d
 ```
 
-运行之后，可以看到三个docker容器都启动了，如下所示
+运行之后，可以看到四个docker容器都启动了，如下所示
 ```bash
-CONTAINER ID   IMAGE               COMMAND                  CREATED          STATUS          PORTS     NAMES
-aa969e57ba73   bruce/nginx         "/docker-entrypoint.…"   37 seconds ago   Up 1 second               nginx
-a912a1d54baa   finab/bark-server   "/entrypoint.sh bark…"   37 seconds ago   Up 37 seconds             bark-server
-2038321f125f   bruce/acme.sh       "/usr/sbin/crond -f …"   45 minutes ago   Up 45 minutes             acme.sh
+CONTAINER ID   IMAGE                COMMAND                  CREATED         STATUS         PORTS     NAMES
+1a96e50b4d49   wizjin/chanify:dev   "/usr/local/bin/chan…"   3 seconds ago   Up 2 seconds             chanify
+bff0659b6f25   bruce/nginx          "/docker-entrypoint.…"   3 seconds ago   Up 2 seconds             nginx
+a566d5ca2c0f   bruce/acme.sh        "/usr/sbin/crond -f …"   3 seconds ago   Up 2 seconds             acme.sh
+c56fc7cf6a25   finab/bark-server    "/entrypoint.sh bark…"   3 seconds ago   Up 2 seconds             bark-server
 ```
 
-### 测试ping
-运行以下命令进行测试
-```bash
-curl https://bark.zhangsan.com/ping
-```
-
-如果一切正常，应该返回如下所示的json
+### 测试连通性
+**Bark-server**：在浏览器中访问：https://bark.zhangsan.com/ping，如果一切正常，应该显示如下所示的json
 ```json
 {"code":200,"message":"pong","timestamp":1668248534}
 ```
 
 至此，服务器就算是搭建完成了，你的消息推送地址为：`https://bark.zhangsan.com`，把它填到Bark app中就行。
 
-### 添加地址到Bark app
+---
+
+**Chanify**：在浏览器中访问：https:chanify.zhangsan.com，如果正常，会出来一个二维码，说明Chanify服务器运行正常。
+
+### 添加地址到app中
+**添加到Bark app中**：
 在Bark app中，点击底部第一个按钮“服务器” → 点击“右上角+号” → 把地址`https://bark.zhangsan.com`粘贴进去 → 点击右上角的对勾✓ → 它会返回到服务器列表中，至此就添加完成了。
 
+**添加地址到Chanify app中**：
+
+- 1、打开[https://chanify.zhangsan.com](https://chanify.zhangsan.com)会出来二维码(注意要把zhangsan.com换成你自己的真实的域名)；
+- 2、在Chanify app中，点击底部第二个按钮“节点” → 点击“右上角+号” → 扫第1步出来的码，会出来这节点信息；
+- 3、点击第2步页面的最后的“添加节点”即可添加，如果你之前添加过，它会显示“更新节点”。
+
+**注**：Chanify如果添加失败，一般是由于chanify配置文件中的endpoint与你访问二维码的链接不同导致的，把它修改为访问二维码的地址并重启(`docer restart chanify`)。
+
 ### 如果之前已有nginx
-如果你之前就已经有nginx，也配置好了证书，那么你可以把`docker-compose.yml`中的acme.sh模块(即以下模块)注释掉
-```bash
-# acme.sh，用于申请https证书
-# 文档：https://github.com/acmesh-official/acme.sh/wiki/Run-acme.sh-in-docker
-acme.sh:
-build:
-  context: .
-  dockerfile: acme.sh-dockerfile
-# 这个image就是上面构建的img，这样可以自定义名称
-image: bruce/acme.sh
-container_name: acme.sh
-environment:
-  - CF_Email=${CF_Email}
-  - CF_Key=${CF_Key}
-  # acme.sh工作目录，获取证书或日志文件都会向该目录写入，该参数也可在运行时通过--home来覆盖
-  - LE_WORKING_DIR=/root/acmeout
-  - TZ=Asia/Shanghai
-volumes:
-  - ./certs/:/root/certs/
-  - ./wwwroot/:/data/wwwroot/
-  - ./acmeout/:/root/acmeout/
-network_mode: host
-restart: always
-```
-
-然后在`server_name`模块中添加你要用于bark-server的域名
+如果你之前就已经有nginx，也配置好了证书，那么你可以把`docker-compose.yml`中的acme.sh模块和nginx模块都注释掉，然后在`server_name`模块中添加你要用于bark-server或chanify的域名
 ```nginx
-server_name example.com www.example.com bark.zhangsan.com bark-cdn.zhangsan.com;
+server_name example.com www.example.com bark.example.com chanify.example.com;
 ```
 
-然后参考以下的写法，通过if来判断域名，相当于一个location两个用途，当符合if条件的时候，就用于bark-server，当不符合if条件的时候，就用于它之前的用途，当然location后不能有其它，只能有一个斜杠`/`
+然后参考以下的写法，通过if来判断域名来判断是否需要转发，转发到哪个端口，相当于一个location多个用途
 ```nginx
 location / {
-    set $flag 0;
-    #return 502 $host;
-    if ( $host = "bark.example.com" ) {
-        set $flag 1;
-    }
-    if ( $host = "bark-cdn.example.com" ) {
-        set $flag 1;
-    }
-    if ( $flag = 0 ) {
-        # 当请求的不是bark.example.com或bark-cdn.example.com时，做你想做的事
-        return 302 https://www.xiebruce.top;
-    }
     log_not_found on;
-    # Replace http://192.168.1.123:8080 with the listening address of the bark server.
-    proxy_pass http://127.0.0.1:8080;
 
     proxy_read_timeout 300;
     proxy_connect_timeout 300;
@@ -323,5 +329,27 @@ location / {
     proxy_set_header Host              $host;
     proxy_set_header X-Forwarded-Proto $scheme;
     proxy_set_header X-Real-IP         $remote_addr;
+
+    # 特别注意：nginx配置文件的if是没有else的，虽然它能用&&和||符号，但不能用于表达式之间，而只能用于变量之间
+    if ( $host = "example.com" ) {
+        return 302 https://www.$host$request_uri;
+        break;
+    }
+
+    # 通过域名来判断要转发到哪个端口，实现一个配置多用
+    if ( $host = "bark.example.com" ) {
+        proxy_pass http://127.0.0.1:8080;
+        break;
+    }
+
+    if ( $host = "chanify.example.com" ) {
+        proxy_pass http://127.0.0.1:8081;
+        break;
+    }
+
+    # 默认反代地址（当前面if条件都不符合时，会走这里）
+    try_files $uri $uri/ /index.html;
+    # 如果本机没有搭建网站，也可以跳转到其它网站
+    # return 302 https://www.xiebruce.top;
 }
 ```
