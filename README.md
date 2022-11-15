@@ -9,7 +9,9 @@
 
 ---
 
-**原理**：通过nginx承接https(443端口)流量，并转发给bark-server的8080以及chanify的8081端口，以达到加密的目的。而acme.sh用于申请证书，当你用http-01方式来申请证书时，需要nginx开一个80端口来让letsencrypt校验，但由于还没有申请到证书，所以443端口那个配置文件暂时不能启用，等申请到证书，安装到目的文件夹后，再启用443端口那个nginx配置文件(复制一份并去掉`.bak`后缀就会启用)。
+**原理**：通过nginx承接https(443端口)流量，并转发给bark-server的8080以及chanify的8081端口，以达到加密的目的。
+
+而acme.sh用于申请证书，当你用http-01方式来申请证书时，需要nginx开一个80端口来让letsencrypt校验，但由于还没有申请到证书，所以443端口那个配置文件暂时不能启用，等申请到证书，安装到目的文件夹后，再启用443端口那个nginx配置文件(复制一份并去掉`.bak`后缀就会启用)，当然用dns-01方式申请就没这个问题，但有些域名又无法使用dns-01方式申请，比如freenom的免费域名使用cf解析时就无法用dns-01方式申请(cf把它禁了)。
 
 ## 环境准备
 ### 工具材料
@@ -31,19 +33,19 @@ clone下来的bark-server-docker文件夹中有一个docker-compose.yml文件，
 
 比如你不想用chanify，那就把两个chanify模块注释掉
 ```yaml
-  # Chanify app服务器端: https://github.com/chanify/chanify
-  # 也是一个苹果消息推送服务器，但功能强大的多，但也比较复杂，用的人少
-  # chanify:
-  #   image: wizjin/chanify:dev
-  #   container_name: chanify
-  #   command: serve
-  #   environment:
-  #     - TZ=Asia/Shanghai
-  #   volumes:
-  #     - ./data/chanify:/data
-  #     - ./conf/chanify/chanify.yml:/root/.chanify.yml
-  #   network_mode: host
-  #   restart: always
+# Chanify app服务器端: https://github.com/chanify/chanify
+# 也是一个苹果消息推送服务器，但功能强大的多，但也比较复杂，用的人少
+# chanify:
+#   image: wizjin/chanify:dev
+#   container_name: chanify
+#   command: serve
+#   environment:
+#     - TZ=Asia/Shanghai
+#   volumes:
+#     - ./data/chanify:/data
+#     - ./conf/chanify/chanify.yml:/root/.chanify.yml
+#   network_mode: host
+#   restart: always
 ```
 
 ## 申请https证书
@@ -287,8 +289,34 @@ a566d5ca2c0f   bruce/acme.sh        "/usr/sbin/crond -f …"   3 seconds ago   U
 c56fc7cf6a25   finab/bark-server    "/entrypoint.sh bark…"   3 seconds ago   Up 2 seconds             bark-server
 ```
 
+### 修改chanify配置文件
+配置如下，特别注意`endpoint`必须与你真实的域名一致，否则会导致无法添加节点
+```yaml
+server:
+    host: 127.0.0.1   # Listen ip address
+    port: 8081      # Listen port
+    # 必须与你最终访问的url一致
+    endpoint: https://chanify.zhangsan.com
+    name: "自定义名称" # 节点添加到手机后，会在手机节点列表中显示该名称
+    datapath: /data/ # data storage path for serverful node server
+    http:
+        - readtimeout: 10s  # 10 seconds for http read timeout
+        - writetimeout: 10s # 10 seconds for http write timeout
+    register:
+        enable: false # Disable user register
+        whitelist: # whitelist for user register
+            # 用户id，在Chanify app中的：设置→用户 里
+            - ABLGYLOFFJSDFOISFHSIFDISDFWQ44YZ7VM
+            # - <user id 2>
+```
+
+修改后重启chanify
+```bash
+docker restart chanify
+```
+
 ### 测试连通性
-**Bark-server**：在浏览器中访问：https://bark.zhangsan.com/ping，如果一切正常，应该显示如下所示的json
+**Bark-server**：在浏览器中访问`https://bark.zhangsan.com/ping`，如果一切正常，应该显示如下所示的json
 ```json
 {"code":200,"message":"pong","timestamp":1668248534}
 ```
@@ -297,11 +325,13 @@ c56fc7cf6a25   finab/bark-server    "/entrypoint.sh bark…"   3 seconds ago   U
 
 ---
 
-**Chanify**：在浏览器中访问：https:chanify.zhangsan.com，如果正常，会出来一个二维码，说明Chanify服务器运行正常。
+**Chanify**：在浏览器中访问`https://chanify.zhangsan.com`，如果正常，会出来一个二维码，说明Chanify服务器运行正常。
 
 ### 添加地址到app中
 **添加到Bark app中**：
 在Bark app中，点击底部第一个按钮“服务器” → 点击“右上角+号” → 把地址`https://bark.zhangsan.com`粘贴进去 → 点击右上角的对勾✓ → 它会返回到服务器列表中，至此就添加完成了。
+
+---
 
 **添加地址到Chanify app中**：
 
@@ -310,6 +340,29 @@ c56fc7cf6a25   finab/bark-server    "/entrypoint.sh bark…"   3 seconds ago   U
 - 3、点击第2步页面的最后的“添加节点”即可添加，如果你之前添加过，它会显示“更新节点”。
 
 **注**：Chanify如果添加失败，一般是由于chanify配置文件中的endpoint与你访问二维码的链接不同导致的，把它修改为访问二维码的地址并重启(`docer restart chanify`)。
+
+### 测试推送通知
+**测试Bark推送**：
+在浏览器中访问以下链接即可，其中`https://bark.example.com/<token>/`部分是可以从app服务器列表中直接复制的，`%0a`是换行符
+```bash
+https://bark.example.com/<token>/这是测试标题/这是测试内容%0a换行内容%0a再换行
+```
+如果推送成功，它会返回像以下这样的json，并且手机Bark app也能收到消息通知
+```json
+{"code":200,"message":"success","timestamp":1668536487}
+```
+
+---
+
+**测试Chanify推送**：
+在url中`%0a`表示换行，token获取方式：点击chanify app中的某个“频道”→右上角三个点→令牌就是了(它默认有多个令牌，有自带的，有你自建的)，在浏览器访问以下链接就能测试推荐
+```bash
+https://chanify.zhangsan.com/v1/sender/<token>?sound=1&priority=10&title=hello&text=这是推送文本%0a试试换行%0a再换行%0a再换&copy=1234&autocopy=1
+```
+如果正常，它会返回以下这样的json，并且手机Chanify也能收到消息通知
+```json
+{"request-uid":"4ba36d56-8069-4e20-a77a-40229b455453"}
+```
 
 ### 如果之前已有nginx
 如果你之前就已经有nginx，也配置好了证书，那么你可以把`docker-compose.yml`中的acme.sh模块和nginx模块都注释掉，然后在`server_name`模块中添加你要用于bark-server或chanify的域名
