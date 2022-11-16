@@ -293,21 +293,28 @@ c56fc7cf6a25   finab/bark-server    "/entrypoint.sh bark…"   3 seconds ago   U
 配置如下，特别注意`endpoint`必须与你真实的域名一致，否则会导致无法添加节点
 ```yaml
 server:
-    host: 127.0.0.1   # Listen ip address
-    port: 8081      # Listen port
-    # 必须与你最终访问的url一致
-    endpoint: https://chanify.zhangsan.com
-    name: "自定义名称" # 节点添加到手机后，会在手机节点列表中显示该名称
-    datapath: /data/ # data storage path for serverful node server
-    http:
-        - readtimeout: 10s  # 10 seconds for http read timeout
-        - writetimeout: 10s # 10 seconds for http write timeout
-    register:
-        enable: false # Disable user register
-        whitelist: # whitelist for user register
-            # 用户id，在Chanify app中的：设置→用户 里
-            - ABLGYLOFFJSDFOISFHSIFDISDFWQ44YZ7VM
-            # - <user id 2>
+  # 只监听本机，外网通过nginx反代过来
+  host: 127.0.0.1
+  # 监听本机的8081端口，这个可以自己随便设置，只要没被占用就好
+  port: 8081
+  # 必须与你最终访问的url一致
+  endpoint: https://chanify.zhangsan.com
+  # 节点添加到手机后，会在手机节点列表中显示该名称
+  name: "自定义名称"
+  # 用于存储图片等文件(因为chanify不仅仅只支持推送文本)
+  datapath: /data/
+  http:
+    # http读取超时时间
+    - readtimeout: 10s
+    # http写入超时时间
+    - writetimeout: 10s
+  register:
+    # 设置为false理论上就无法添加该节点，但事实上还是可以添加，估计是bug
+    enable: false
+    whitelist: # whitelist for user register
+      # 用户id，在Chanify app中的：设置→用户 里，这是白名单，添加后，即使enable为false，也能添加
+      - ABLGYLOFFJSDFOISFHSIFDISDFWQ44YZ7VM
+      # - <user id 2>
 ```
 
 修改后重启chanify
