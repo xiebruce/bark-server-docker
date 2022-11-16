@@ -1,5 +1,9 @@
 # bark-server-docker使用说明
 
+搭建bark-server主要是为了实现：[自动转发安卓机短信到iPhone](https://www.xiebruce.top/1826.html)。
+
+---
+
 本项目集成了四个容器：
 
 - 1、bark-server：自建bark app服务器端；
@@ -11,7 +15,7 @@
 
 **原理**：通过nginx承接https(443端口)流量，并转发给bark-server的8080以及chanify的8081端口，以达到加密的目的。
 
-而acme.sh用于申请证书，当你用http-01方式来申请证书时，需要nginx开一个80端口来让letsencrypt校验，但由于还没有申请到证书，所以443端口那个配置文件暂时不能启用，等申请到证书，安装到目的文件夹后，再启用443端口那个nginx配置文件(复制一份并去掉`.bak`后缀就会启用)，当然用dns-01方式申请就没这个问题，但有些域名又无法使用dns-01方式申请，比如freenom的免费域名使用cf解析时就无法用dns-01方式申请(cf把它禁了)。
+而acme.sh用于申请证书，当你用http-01方式来申请证书时，需要nginx开一个80端口来让letsencrypt校验，但由于还没有申请到证书，所以443端口那个配置文件暂时不能启用，等申请到证书，安装到目的文件夹后，再启用443端口那个nginx配置文件(复制一份并去掉`.bak`后缀就会启用)，当然用dns-01方式申请就没这个问题，但有些域名又无法使用dns-01方式申请，比如freenom的免费域名使用cloudflare解析时就无法用dns-01方式申请(cloudflare禁止这类免费域名通过dns-01方式申请证书)。
 
 ## 环境准备
 ### 工具材料
@@ -23,7 +27,7 @@
 在服务器中安装docker，请参考官方文档：[Install Docker Engine on Debian](https://docs.docker.com/engine/install/debian/)。
 
 ### 下载bark-server-docker
-我准备了一个bark-server的docker运行环境，直接clone下来就行：
+下载我准备好的docker-compose环境：
 ```bash
 cd /root/
 git clone https://github.com/xiebruce/bark-server-docker.git
@@ -94,16 +98,21 @@ export CF_Email=zhangsan@163.com
 export CF_Key=sdf39sdDfsjDkJN#)EJD
 EOF
 ```
+- CF_Email：就是你登录Cloudflare的邮箱；
+- CF_Key：登录[Cloudflare](https://www.cloudflare.com/)后，点击[这个链接](https://dash.cloudflare.com/profile/api-tokens)，在里面找到“Global API Key”→点击它右侧的“View”按钮→输入登录Cloudflare的密码即可查看，请不要使用“Origin CA Key”，[acme.sh作者](https://github.com/Neilpang)在[这里](https://github.com/acmesh-official/acme.sh/issues/1976#issuecomment-450292853)有说Origin CA Key是不行的。
+
+---
 
 注意：执行上边命令前，要把CF_Email和CF_Key修改为你自己的，而且key未必是CF_Email和CF_Key，具体要看你是在哪个网站中解析你的域名的，比如如果是在阿里云解析域名，则需要变成
 ```bash
 cat > ~/.bashrc << EOF
-export Ali_Key=zhangsan@163.com
+export Ali_Key=sdf39sdDfsjDkJN#)EJD
 export Ali_Secret=sdf39sdDfsjDkJN#)EJD
 EOF
 ```
+**Ali_Key和Ali_Secret获取方式**：进入[阿里云控制台](https://home.console.aliyun.com/)→点击右上角用户名→accesskey管理→继续使用AccessKey→创建AccessKey→AccessKey ID对应上边的Ali_key，而Ali_Secret要点击“查看Secret”；
 
-其它的请自己从[这里](https://github.com/acmesh-official/acme.sh/tree/master/dnsapi)找到对应文件，然后点进去看源码里用的哪个变量。
+如果你的域名不是在Cloudflare解析，也不是阿里在云解析的，请自己从[这里](https://github.com/acmesh-official/acme.sh/tree/master/dnsapi)找到对应文件，然后点进去看源码里用的哪个变量。
 
 如果添加错了，请自己用vi/vim/nano命令去`~/.bashrc`文件或`~/.zshrc`文件中修改
 
