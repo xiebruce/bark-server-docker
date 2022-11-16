@@ -252,6 +252,34 @@ acme.sh容器内部运行了一个crond服务，你在acme.sh容器内执行`cro
 注：虽然每天都会检查一次更新，但如果检查发现没有到期，它是不会更新证书的，如果到期了，它才会更新，而且更新完它会自动重启nginx服务器以新加载新证书(因为第一次安装证书时用`--reloadcmd`指定了安装证书后重启nginx，它是会记住这个命令的)。至于为什么在容器内它也能重启另一个容器，那是因为我在容器内安装了docker-cli(acme.sh-dockerfile自动安装的)，并且把`/var/run/docker.sock`映射进去了。
 
 ## 运行所有服务
+### 修改chanify配置文件
+配置如下，特别注意`endpoint`必须与你真实的域名(查看二维码的域名)一致，否则会导致无法添加节点
+```yaml
+server:
+  # 只监听本机，外网通过nginx反代过来
+  host: 127.0.0.1
+  # 监听本机的8081端口，这个可以自己随便设置，只要没被占用就好
+  port: 8081
+  # 必须与你最终访问的url一致
+  endpoint: https://chanify.zhangsan.com
+  # 节点添加到手机后，会在手机节点列表中显示该名称
+  name: "自定义名称"
+  # 用于存储图片等文件(因为chanify不仅仅只支持推送文本)
+  datapath: /data/
+  http:
+    # http读取超时时间
+    - readtimeout: 10s
+    # http写入超时时间
+    - writetimeout: 10s
+  register:
+    # 设置为false理论上就无法添加该节点，但事实上还是可以添加，估计是bug
+    enable: false
+    whitelist: # whitelist for user register
+      # 用户id，在Chanify app中的：设置→用户 里，这是白名单，添加后，即使enable为false，也能添加
+      - ABLGYLOFFJSDFOISFHSIFDISDFWQ44YZ7VM
+      # - <user id 2>
+```
+
 ### 再修改nginx配置文件
 进入以下目录
 ```bash
@@ -296,39 +324,6 @@ CONTAINER ID   IMAGE                COMMAND                  CREATED         STA
 bff0659b6f25   bruce/nginx          "/docker-entrypoint.…"   3 seconds ago   Up 2 seconds             nginx
 a566d5ca2c0f   bruce/acme.sh        "/usr/sbin/crond -f …"   3 seconds ago   Up 2 seconds             acme.sh
 c56fc7cf6a25   finab/bark-server    "/entrypoint.sh bark…"   3 seconds ago   Up 2 seconds             bark-server
-```
-
-### 修改chanify配置文件
-配置如下，特别注意`endpoint`必须与你真实的域名(查看二维码的域名)一致，否则会导致无法添加节点
-```yaml
-server:
-  # 只监听本机，外网通过nginx反代过来
-  host: 127.0.0.1
-  # 监听本机的8081端口，这个可以自己随便设置，只要没被占用就好
-  port: 8081
-  # 必须与你最终访问的url一致
-  endpoint: https://chanify.zhangsan.com
-  # 节点添加到手机后，会在手机节点列表中显示该名称
-  name: "自定义名称"
-  # 用于存储图片等文件(因为chanify不仅仅只支持推送文本)
-  datapath: /data/
-  http:
-    # http读取超时时间
-    - readtimeout: 10s
-    # http写入超时时间
-    - writetimeout: 10s
-  register:
-    # 设置为false理论上就无法添加该节点，但事实上还是可以添加，估计是bug
-    enable: false
-    whitelist: # whitelist for user register
-      # 用户id，在Chanify app中的：设置→用户 里，这是白名单，添加后，即使enable为false，也能添加
-      - ABLGYLOFFJSDFOISFHSIFDISDFWQ44YZ7VM
-      # - <user id 2>
-```
-
-修改后重启chanify
-```bash
-docker restart chanify
 ```
 
 ### 测试连通性
