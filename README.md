@@ -31,7 +31,7 @@ git clone https://github.com/xiebruce/bark-server-docker.git
 
 clone下来的bark-server-docker文件夹中有一个docker-compose.yml文件，该文件是docker compose配置文件，它有四个模块，其中acme.sh和nginx肯定要用到的，而bark-server和chanify这两个一般人只要用其中一个就够了，你自己看情况，把不用的那个注释掉，当然如果你两个都用也行，它们是可以同时启动的。
 
-比如你不想用chanify，那就把两个chanify模块注释掉
+比如你不想用chanify，那就把chanify模块注释掉
 ```yaml
 # Chanify app服务器端: https://github.com/chanify/chanify
 # 也是一个苹果消息推送服务器，但功能强大的多，但也比较复杂，用的人少
@@ -215,11 +215,11 @@ rm -rf wwwroot/well-known/.well-known
 docker exec -it acme.sh sh
 ```
 
-运行以下命令申请证书，当然`zhangsan.com`要换成你自己的真实域名
+运行以下命令申请证书，当然`zhangsan.com`要换成你自己的真实域名(每个`-d`指定的域名都必须已经解析到当前服务器)
 ```bash
 acme.sh --issue -d zhangsan.com -d www.zhangsan.com -d bark.zhangsan.com -d chanify.zhangsan.com --webroot /data/wwwroot/well-known/  --home /root/acmeout --keylength ec-256
 ```
-**注意**：每个`-d`表示一个域名，如果你又解析了一个域名，你还得把它加到下边命令中，重新申请一次证书，不能申请通配符证书就是这么麻烦。
+**注意**：每个`-d`表示一个域名，如果你又解析了一个域名，你还得把它加到上边命令中，重新申请一次证书，不能申请通配符证书就是这么麻烦。
 
 申请证书成功后，安装证书
 ```bash
@@ -290,7 +290,7 @@ c56fc7cf6a25   finab/bark-server    "/entrypoint.sh bark…"   3 seconds ago   U
 ```
 
 ### 修改chanify配置文件
-配置如下，特别注意`endpoint`必须与你真实的域名一致，否则会导致无法添加节点
+配置如下，特别注意`endpoint`必须与你真实的域名(查看二维码的域名)一致，否则会导致无法添加节点
 ```yaml
 server:
   # 只监听本机，外网通过nginx反代过来
@@ -354,6 +354,7 @@ docker restart chanify
 ```bash
 https://bark.example.com/<token>/这是测试标题/这是测试内容%0a换行内容%0a再换行
 ```
+
 如果推送成功，它会返回像以下这样的json，并且手机Bark app也能收到消息通知
 ```json
 {"code":200,"message":"success","timestamp":1668536487}
@@ -362,10 +363,12 @@ https://bark.example.com/<token>/这是测试标题/这是测试内容%0a换行�
 ---
 
 **测试Chanify推送**：
-在url中`%0a`表示换行，token获取方式：点击chanify app中的某个“频道”→右上角三个点→令牌就是了(它默认有多个令牌，有自带的，有你自建的)，在浏览器访问以下链接就能测试推荐
+在浏览器访问以下链接，在url中`%0a`表示换行，`<token>`要替换为chanify app中的真实token
 ```bash
 https://chanify.zhangsan.com/v1/sender/<token>?sound=1&priority=10&title=hello&text=这是推送文本%0a试试换行%0a再换行%0a再换&copy=1234&autocopy=1
 ```
+**token获取方式**：点击chanify app中的某个“频道”→右上角三个点→令牌(它默认有多个令牌，有自带的，有你自建的，选你自建的就行)。
+
 如果正常，它会返回以下这样的json，并且手机Chanify也能收到消息通知
 ```json
 {"request-uid":"4ba36d56-8069-4e20-a77a-40229b455453"}
@@ -377,7 +380,7 @@ https://chanify.zhangsan.com/v1/sender/<token>?sound=1&priority=10&title=hello&t
 server_name example.com www.example.com bark.example.com chanify.example.com;
 ```
 
-然后参考以下的写法，通过if来判断域名来判断是否需要转发，转发到哪个端口，相当于一个location多个用途
+然后参考以下的写法，通过if来判断域名以确认是否需要转发、转发到哪个端口等等，相当于一个location多个用途
 ```nginx
 location / {
     log_not_found on;
