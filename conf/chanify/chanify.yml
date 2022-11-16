@@ -10,8 +10,10 @@ server:
   # 用于存储图片等文件(因为chanify不仅仅只支持推送文本)
   datapath: /data/
   http:
-    - readtimeout: 10s  # 10 seconds for http read timeout
-    - writetimeout: 10s # 10 seconds for http write timeout
+    # http读取超时时间
+    - readtimeout: 10s
+    # http写入超时时间
+    - writetimeout: 10s
   register:
     # 设置为false理论上就无法添加该节点，但事实上还是可以添加，估计是bug
     enable: false
