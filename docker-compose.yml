@@ -1,7 +1,7 @@
 version: '1.0'
 name: bark-server-docker
 services:
-  # nginx服务器，用于反代到bark-server
+  # nginx服务器，用于反代到bark-server或chanify
   nginx:
     build:
       context: .
